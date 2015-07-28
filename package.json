@@ -1,0 +1,52 @@
+{
+  "name": "cassandra-migration",
+  "description": "Simple schema migration tool for Apache Cassandra",
+  "keywords": [
+    "Cassandra",
+    "Migration",
+    "Schema"
+  ],
+  "version": "1.0.0",
+  "author": "Joel Edwards (https://github.com/joeledwards)",
+  "contributors": [
+    "Joel Edwards <joeledwards@gmail.com> (https://github.com/joeledwards)"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joeledwards/node-cassandra-migration.git"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/joeledwards/node-cassandra-migration/blob/master/LICENSE"
+    }
+  ],
+  "main": "./lib/index",
+  "directories": {
+    "lib": "./lib"
+  },
+  "bin": {
+    "cassandra-migration": "./bin/cassandra-migration"
+  },
+  "dependencies": {
+    "cassandra-driver": "^2.1",
+    "commander": "^2.8",
+    "durations": "^1",
+    "lodash": "^3.10",
+    "q": "^1.4"
+  },
+  "devDependencies": {
+    "coffee-script": "^1.9",
+    "mocha": "^1.20",
+    "timeunit": "^1"
+  },
+  "scripts": {
+    "build": "cake build",
+    "prepublish": "cake build",
+    "start": "coffee src/index.coffee",
+    "test": "cake test"
+  },
+  "engines": {
+    "node": ">=0.10"
+  }
+}
