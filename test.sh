@@ -1,9 +1,10 @@
 #!/bin/bash
 
 PLATFORM=`uname`
-CONTAINER_NAME="wait-for-cassandra-test-container"
+CONTAINER_NAME="cassandra-migration-test-container"
 
 KEYSPACE='versioning'
+CFG_FILE='migrations.json'
 
 docker kill $CONTAINER_NAME
 docker rm $CONTAINER_NAME
@@ -21,11 +22,21 @@ fi
 echo "host: ${HOST}"
 echo "port: ${PORT}"
 
-echo "{" > migration.json
-echo " \"keyspace\": \"${KEYSPACE}\"" >> migration.json
-echo "}" >> migration.json
+echo "{" > $CFG_FILE
+echo "  \"migrationsDir\": \"test\"," >> $CFG_FILE
+echo "  \"cassandra\": {" >> $CFG_FILE
+echo "    \"contactPoints\": [\"${HOST}\"]," >> $CFG_FILE
+echo "    \"socketOptions\": {" >> $CFG_FILE
+echo "      \"port\": \"${PORT}\"" >> $CFG_FILE
+echo "    }," >> $CFG_FILE
+echo "    \"keyspace\": \"${KEYSPACE}\"" >> $CFG_FILE
+echo " }" >> $CFG_FILE
+echo "}" >> $CFG_FILE
 
-coffee src/index.coffee migration.json
+node_modules/wait-for-cassandra/bin/wait-for-cassandra --host=$HOST --port=$PORT
+node keyspace.js
+
+coffee src/index.coffee $CFG_FILE
 
 docker kill $CONTAINER_NAME
 docker rm $CONTAINER_NAME

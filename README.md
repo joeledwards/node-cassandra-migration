@@ -32,6 +32,9 @@ The configuration file contains general options at the top level and the cassand
 The `cassandra` section should comply with the the configuration supported by the cassandra-driver module.
 All other sections provide directives to the tool itself.
 
+The keyspace is required, and must be created outside of the migrations.
+The `schema_version` table will be created within this keyspace.
+
 
 Example config:
 

@@ -1,4 +1,4 @@
-CREATE TABLE first (
+CREATE TABLE versioning.first (
   id int,
   name string,
 

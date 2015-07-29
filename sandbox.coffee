@@ -1,6 +1,7 @@
 #!/usr/bin/env coffee
 
 _ = require 'lodash'
+Q = require 'q'
 FS = require 'fs'
 
 #n = [1, 2, 3, 7, 8, 9,2,3,522,23,42,3,25,23,5,4,24,5,23,4,345]
@@ -26,7 +27,7 @@ config =
 
 console.log "Config: #{config}"
 
-console.log "Stat:", FS.statSync('test.coffee')
+console.log "Stat:", FS.statSync('sandbox.coffee')
 
 idx.listMigrations config
 .then (files) ->
@@ -35,4 +36,16 @@ idx.listMigrations config
   console.log "Error: #{error}\n#{error.stack}"
 
 console.log "Shift empty array:", [].shift()
+
+promiseMe = (value) ->
+  d = Q.defer()
+  setTimeout(-> d.resolve value, 5000)
+  d.promise
+
+Q.all [promiseMe('A'), promiseMe('B')]
+.spread (a, b) ->
+  console.log "a: #{a}"
+  console.log "b: #{b}"
+.catch (error) ->
+  console.log error
 
