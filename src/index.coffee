@@ -11,7 +11,6 @@ readConfig = (configFile) ->
   .then (rawConfig) ->
     d = Q.defer()
     try
-      console.log "Raw config:", rawConfig
       config = JSON.parse rawConfig
       d.resolve config
     catch error
@@ -49,7 +48,6 @@ listMigrations = (config) ->
           file = "#{migrationsDir}/#{fileName}"
           [file, version]
         .filter ([file, version]) -> not isNaN(version)
-        .sortBy ([file, version]) -> version
         .value()
 
         if _(migrationFiles).size() > 0
@@ -57,7 +55,6 @@ listMigrations = (config) ->
         else
           d.reject new Error("No migration files found")
   d.promise.then (files) ->
-    console.log "Actual Migration Files:", files
     files
 
 
@@ -70,7 +67,7 @@ getCassandraClient = (config) ->
       if error?
         d.reject error
       else
-        console.log "Cassandra client connected."
+        console.log "Connected to Cassandra." if not config.quiet
         d.resolve client
   catch error
     d.reject new Error("Error creating Cassandra client: #{error}", error)
@@ -78,7 +75,7 @@ getCassandraClient = (config) ->
 
 
 # Create a the schema_version table in the keyspace if it does not yet exist
-createVersionTable = (client, keyspace) ->
+createVersionTable = (config, client, keyspace) ->
   d = Q.defer()
   tableQuery = """SELECT columnfamily_name 
     FROM system.schema_columnfamilies 
@@ -87,7 +84,7 @@ createVersionTable = (client, keyspace) ->
     if error?
       d.reject error
     else if _(results.rows).filter((row) -> row.name == 'schema_version').size() > 0
-      console.log "schema_version table already exists."
+      console.log "Schema_version table already exists."
       d.resolve client
     else
       createQuery = """CREATE TABLE #{keyspace}.schema_version (
@@ -107,8 +104,8 @@ createVersionTable = (client, keyspace) ->
   d.promise
 
 # Fetch the schema version from the schema_version table in the keyspace
-getSchemaVersion = (client, keyspace) ->
-  createVersionTable client, keyspace
+getSchemaVersion = (config, client, keyspace) ->
+  createVersionTable config, client, keyspace
   .then ->
     d = Q.defer()
     console.log "Fetching version info..."
@@ -132,17 +129,18 @@ applyMigration = (client, remainingMigrations, schemaVersion) ->
   if migration?
     [file, version] = migration
     cql = FS.readFileSync file, 'utf-8'
+    console.log "CQL: #{cql}"
     client.execute cql, (error, results) ->
       console.log "Done applying migration #{version}."
       if error?
         d.reject new Error("Error applying migration #{version} (file #{file}): #{error}", error)
       else
         d.promise.then (version) ->
-          console.log "What now?"
           applyMigration client, remainingMigrations, version
-        console.log "Resolving with new version..."
+        console.log "Resolving with new version: #{version}"
         d.resolve version
   else
+    console.log "Resolving with new version: #{schemaVersion}"
     d.resolve schemaVersion
   d.promise
     
@@ -155,6 +153,12 @@ migrate = (client, migrationFiles, schemaVersion) ->
 
   remainingMigrations = _(migrationFiles)
   .filter ([file, version]) -> version > schemaVersion
+  .sortBy ([file, version]) -> version
+  # TODO: switch to a reduce operation, collapsing to a single 
+  #       result promise supplying the final version:
+  #         migrationsOperations.reduce(Q.when, Q(schemaVersion))
+  #.map ([file, version]) ->
+  #  -> applyMigration client, file, version
   .value()
 
   console.log "Remaining Migrations: #{remainingMigrations}"
@@ -180,7 +184,7 @@ runScript = () ->
     Q.all [listMigrations(config), getCassandraClient(config)]
     .spread (migrationFiles, client) ->
       cassandraClient = client
-      getSchemaVersion client, keyspace
+      getSchemaVersion config, client, keyspace
       .then (schemaVersion) ->
         migrate client, migrationFiles, schemaVersion
     .then (version) ->

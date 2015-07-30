@@ -1,6 +1,6 @@
 CREATE TABLE versioning.second (
   id int,
-  name string,
+  name text,
 
   PRIMARY KEY (id)
 );

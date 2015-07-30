@@ -2,7 +2,8 @@
 
 _ = require 'lodash'
 Q = require 'q'
-FS = require 'fs'
+fs = require 'fs'
+os = require 'os'
 
 #n = [1, 2, 3, 7, 8, 9,2,3,522,23,42,3,25,23,5,4,24,5,23,4,345]
 n = [['four', 4], ['three', 3], ['seven', 7], ['nine', 9]]
@@ -27,7 +28,7 @@ config =
 
 console.log "Config: #{config}"
 
-console.log "Stat:", FS.statSync('sandbox.coffee')
+console.log "Stat:", fs.statSync('sandbox.coffee')
 
 idx.listMigrations config
 .then (files) ->
@@ -48,4 +49,17 @@ Q.all [promiseMe('A'), promiseMe('B')]
   console.log "b: #{b}"
 .catch (error) ->
   console.log error
+
+cpus = os.cpus()
+cpuCount = _(cpus).size()
+console.log "[#{cpuCount}] CPUs:\n", cpus
+
+Q.fcall ->
+  return Q.fcall -> 
+    return 1
+.then (one) ->
+  throw new Error("This is supposed to happen.")
+  console.log "What?!"
+.catch (error) ->
+  console.log "Hey! We caught an exception: #{error}"
 
