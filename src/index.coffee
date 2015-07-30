@@ -1,8 +1,9 @@
 _ = require 'lodash'
 Q = require 'q'
 FS = require 'fs'
-cassandra = require 'cassandra-driver'
+moment = require 'moment'
 program = require 'commander'
+cassandra = require 'cassandra-driver'
 durations = require 'durations'
 
 # Read the migrations configuration file
@@ -121,55 +122,47 @@ getSchemaVersion = (config, client, keyspace) ->
       
 
 # Apply the first migration from the remaining, and move on to the next
-applyMigration = (client, remainingMigrations, schemaVersion) ->
+applyMigration = (client, keyspace, file, version) ->
   d = Q.defer()
-  migration = remainingMigrations.shift()
-  console.log "Current schema version: #{schemaVersion}"
-  console.log "Applying migration: #{migration}"
-  if migration?
-    [file, version] = migration
-    cql = FS.readFileSync file, 'utf-8'
-    console.log "CQL: #{cql}"
-    client.execute cql, (error, results) ->
-      console.log "Done applying migration #{version}."
-      if error?
-        d.reject new Error("Error applying migration #{version} (file #{file}): #{error}", error)
-      else
-        d.promise.then (version) ->
-          applyMigration client, remainingMigrations, version
-        console.log "Resolving with new version: #{version}"
-        d.resolve version
-  else
-    console.log "Resolving with new version: #{schemaVersion}"
-    d.resolve schemaVersion
+
+  console.log "Applying migration: #{file}"
+
+  cql = "INSERT INTO #{keyspace}.schema_version" +
+    " (zero, version, migration_timestamp)" +
+    " VALUES (0, #{version}, '#{moment().toISOString()}')"
+
+  queries = _.trim(FS.readFileSync(file, 'utf-8')).split(';')
+  queries.push cql
+
+  console.log "Queries:", queries
+
+  # TODO: break out queries into separate executions
+
+  client.execute cql, (error, results) ->
+    console.log "Done applying migration #{version}."
+    if error?
+      d.reject new Error("Error applying migration #{version} (file #{file}): #{error}", error)
+    else
+      console.log "Schema is now at version: #{version}"
+      d.resolve version
+
   d.promise
     
 
 # Run all of the migrations
-migrate = (client, migrationFiles, schemaVersion) ->
-  d = Q.defer()
-
-  console.log "Migrating database..."
-
-  remainingMigrations = _(migrationFiles)
+migrate = (client, keyspace, migrationFiles, schemaVersion) ->
+  migrations = _(migrationFiles)
   .filter ([file, version]) -> version > schemaVersion
   .sortBy ([file, version]) -> version
-  # TODO: switch to a reduce operation, collapsing to a single 
-  #       result promise supplying the final version:
-  #         migrationsOperations.reduce(Q.when, Q(schemaVersion))
-  #.map ([file, version]) ->
-  #  -> applyMigration client, file, version
+  .map ([file, version]) ->
+    -> applyMigration client, keyspace, file, version
   .value()
 
-  console.log "Remaining Migrations: #{remainingMigrations}"
+  versions = _(migrationFiles).map(([file, version]) -> version).value()
+  versions.push schemaVersion
+  console.log "Migrating database #{_(versions).join(" -> ")} ..."
 
-  applyMigration client, remainingMigrations, schemaVersion
-  .then (finalVersion) ->
-    d.resolve finalVersion
-  .catch (error) ->
-    d.reject error
-
-  d.promise
+  migrations.reduce(Q.when, Q(schemaVersion))
 
 
 # Run the script
@@ -186,10 +179,10 @@ runScript = () ->
       cassandraClient = client
       getSchemaVersion config, client, keyspace
       .then (schemaVersion) ->
-        migrate client, migrationFiles, schemaVersion
-    .then (version) ->
-      console.log "Schema is now at version #{version}."
-      code = 0
+        migrate client, keyspace, migrationFiles, schemaVersion
+      .then (version) ->
+        console.log "All migrations complete. Schema is now at version #{version}."
+        code = 0
   .catch (error) ->
     console.log "Error reading configuration file: #{error}\n#{error.stack}"
   .finally ->

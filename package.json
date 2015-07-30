@@ -33,6 +33,7 @@
     "commander": "^2.8",
     "durations": "^1",
     "lodash": "^3.10",
+    "moment": "^2.10",
     "q": "^1.4"
   },
   "devDependencies": {

@@ -4,24 +4,17 @@ _ = require 'lodash'
 Q = require 'q'
 fs = require 'fs'
 os = require 'os'
+assert = require 'assert'
 
-#n = [1, 2, 3, 7, 8, 9,2,3,522,23,42,3,25,23,5,4,24,5,23,4,345]
 n = [['four', 4], ['three', 3], ['seven', 7], ['nine', 9]]
 s = _.sortBy(n, ([t,n]) -> n)
+_.zip(['three', 'four', 'seven', 'nine'], _(s).map(([t,n]) -> t).value()).forEach(([L,R]) -> assert.equal(L, R))
 
-console.log s
+assert.equal('', ''.split('__')[0])
 
-console.log ''.split('__')
-
-l = _([1])
-.filter (v) -> isNaN(v)
-.size()
-
-console.log l
+assert.equal(0, _([1]).filter((v) -> isNaN(v)).size())
 
 idx = require './src/index'
-
-#idx.readConfig
 
 config =
   migrationsDir: "test"
