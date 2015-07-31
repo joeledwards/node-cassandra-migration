@@ -55,6 +55,32 @@ Example config:
 }
 ```
 
+
+Migration Files
+===============
+
+The migration files should all be reside at the root level of the directory 
+specified by `migrationDir` in the config file. Each configuration file should
+follow the format `<VERSION>__<TITLE>.cql`
+
+Each query statement within the file should be separated by three hyphens: `---`
+
+Example:
+```
+CREATE TABLE my_keyspace.my_first_table (
+  id int PRIMARY KEY,
+  name text,
+  record_timestamp timestamp
+);
+---
+CREATE TABLE my_keyspace.my_second_table (
+  id int PRIMARY KEY,
+  description text,
+  record_timestamp timestamp
+);
+```
+
+
 Building
 ============
 

@@ -121,33 +121,37 @@ getSchemaVersion = (config, client, keyspace) ->
     d.promise
       
 
+runQuery = (client, query, version) ->
+  d = Q.defer()
+  client.execute query, (error, results) ->
+    console.log "running query: #{query}"
+    if error?
+      d.reject new Error("Error applying migration #{version}: #{error}", error)
+    else
+      d.resolve version
+  d.promise
+    
+
 # Apply the first migration from the remaining, and move on to the next
 applyMigration = (client, keyspace, file, version) ->
-  d = Q.defer()
-
   console.log "Applying migration: #{file}"
+
+  queryStrings = _.trim(FS.readFileSync(file, 'utf-8')).split('---')
 
   cql = "INSERT INTO #{keyspace}.schema_version" +
     " (zero, version, migration_timestamp)" +
-    " VALUES (0, #{version}, '#{moment().toISOString()}')"
+    " VALUES (0, #{version}, '#{moment().toISOString()}');"
 
-  queries = _.trim(FS.readFileSync(file, 'utf-8')).split(';')
-  queries.push cql
+  queryStrings.push cql
+  console.log "Queries:", queryStrings
 
-  console.log "Queries:", queries
+  queries = _(queryStrings)
+  .map (cql) ->
+    -> runQuery client, cql, version
+  .value()
 
-  # TODO: break out queries into separate executions
+  queries.reduce(Q.when, Q(version))
 
-  client.execute cql, (error, results) ->
-    console.log "Done applying migration #{version}."
-    if error?
-      d.reject new Error("Error applying migration #{version} (file #{file}): #{error}", error)
-    else
-      console.log "Schema is now at version: #{version}"
-      d.resolve version
-
-  d.promise
-    
 
 # Run all of the migrations
 migrate = (client, keyspace, migrationFiles, schemaVersion) ->
@@ -159,7 +163,7 @@ migrate = (client, keyspace, migrationFiles, schemaVersion) ->
   .value()
 
   versions = _(migrationFiles).map(([file, version]) -> version).value()
-  versions.push schemaVersion
+  versions.unshift schemaVersion
   console.log "Migrating database #{_(versions).join(" -> ")} ..."
 
   migrations.reduce(Q.when, Q(schemaVersion))

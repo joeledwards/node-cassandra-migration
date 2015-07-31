@@ -4,3 +4,10 @@ CREATE TABLE versioning.first (
 
   PRIMARY KEY (id)
 );
+---
+CREATE TABLE versioning.first_data (
+  id int,
+  name text,
+
+  PRIMARY KEY (id)
+);
