@@ -3,6 +3,7 @@ Q = require 'q'
 FS = require 'fs'
 moment = require 'moment'
 program = require 'commander'
+moduleVersion = require('../package.json').version
 cassandra = require 'cassandra-driver'
 durations = require 'durations'
 
@@ -68,7 +69,7 @@ getCassandraClient = (config) ->
       if error?
         d.reject error
       else
-        console.log "Connected to Cassandra." if not config.quiet
+        console.log "Connected to Cassandra." if config.debug
         d.resolve client
   catch error
     d.reject new Error("Error creating Cassandra client: #{error}", error)
@@ -82,12 +83,14 @@ createVersionTable = (config, client, keyspace) ->
     FROM system.schema_columnfamilies 
     WHERE keyspace_name='#{keyspace}'"""
   client.execute tableQuery, (error, results) ->
+    tableNames = _(results.rows).map((row) -> row.columnfamily_name).value()
     if error?
       d.reject error
-    else if _(results.rows).filter((row) -> row.name == 'schema_version').size() > 0
-      console.log "Schema_version table already exists."
+    else if _(tableNames).filter((tableName) -> tableName == 'schema_version').size() > 0
+      console.log "Schema_version table already exists." if config.debug
       d.resolve client
     else
+      console.log ""
       createQuery = """CREATE TABLE #{keyspace}.schema_version (
         zero INT,
         version INT,
@@ -109,7 +112,7 @@ getSchemaVersion = (config, client, keyspace) ->
   createVersionTable config, client, keyspace
   .then ->
     d = Q.defer()
-    console.log "Fetching version info..."
+    console.log "Fetching version info..." if config.debug
     client.execute "SELECT version FROM #{keyspace}.schema_version LIMIT 1", (error, results) ->
       if error?
         d.reject new Error("Error reading version information from the version table: #{error}", error)
@@ -121,10 +124,10 @@ getSchemaVersion = (config, client, keyspace) ->
     d.promise
       
 
-runQuery = (client, query, version) ->
+runQuery = (config, client, query, version) ->
   d = Q.defer()
   client.execute query, (error, results) ->
-    console.log "running query: #{query}"
+    console.log "running query: #{query}" if config.debug
     if error?
       d.reject new Error("Error applying migration #{version}: #{error}", error)
     else
@@ -133,7 +136,7 @@ runQuery = (client, query, version) ->
     
 
 # Apply the first migration from the remaining, and move on to the next
-applyMigration = (client, keyspace, file, version) ->
+applyMigration = (config, client, keyspace, file, version) ->
   console.log "Applying migration: #{file}"
 
   queryStrings = _.trim(FS.readFileSync(file, 'utf-8')).split('---')
@@ -147,45 +150,73 @@ applyMigration = (client, keyspace, file, version) ->
 
   queries = _(queryStrings)
   .map (cql) ->
-    -> runQuery client, cql, version
+    -> runQuery config, client, cql, version
   .value()
 
   queries.reduce(Q.when, Q(version))
 
 
 # Run all of the migrations
-migrate = (client, keyspace, migrationFiles, schemaVersion) ->
+migrate = (config, client, keyspace, migrationFiles, schemaVersion) ->
   migrations = _(migrationFiles)
-  .filter ([file, version]) -> version > schemaVersion
+  .filter ([file, version]) -> version > schemaVersion and version <= config.targetVersion
   .sortBy ([file, version]) -> version
-  .map ([file, version]) ->
-    -> applyMigration client, keyspace, file, version
   .value()
 
-  versions = _(migrationFiles).map(([file, version]) -> version).value()
-  versions.unshift schemaVersion
-  console.log "Migrating database #{_(versions).join(" -> ")} ..."
+  console.log("Migrations to be applied: #{migrations} (target version is #{config.targetVersion}") if config.debug
 
-  migrations.reduce(Q.when, Q(schemaVersion))
+  if _(migrations).size() > 0
+    versions = _(migrations).map(([file, version]) -> version).value()
+    versions.unshift schemaVersion
+    console.log "Migrating database #{_(versions).join(" -> ")} ..." if not config.quiet
+
+    migrationFunctions = _(migrations)
+    .map ([file, version]) ->
+      -> applyMigration config, client, keyspace, file, version
+    .value()
+
+    migrationFunctions.reduce(Q.when, Q(schemaVersion))
+    .then (version) ->
+      console.log "All migrations complete. Schema is now at version #{version}."
+      version
+  else
+    console.log "No new migrations. Schema version is #{schemaVersion}"
+    Q(schemaVersion)
+
+
+log = (message, error, quiet, debug) ->
+  if not quiet
+    errorMessage = if error? then ": #{error}" else ''
+    stack = if error? and debug then "\n#{error.stack}" else ''
+    console.log "#{message}#{errorMessage}#{stack}"
 
 
 # Run the script
 runScript = () ->
-  configFile = _(process.argv).last()
+  program
+    .version moduleVersion
+    .option '-q, --quiet', 'Silence non-error output (default is false)'
+    .option '-d, --debug', 'Increase verbosity and error detail'
+    .option '-t, --target-version <version>', 'Maximum migration version to apply (default runs all migrations)'
+    .parse(process.argv)
+
+  configFile = _(program.args).last()
   code = 1
   cassandraClient = undefined
 
   readConfig configFile
   .then (config) ->
+    config.quiet = program.quiet ? config.quiet
+    config.debug = program.debug ? config.debug
+    config.targetVersion = program.targetVersion
     keyspace = config.cassandra.keyspace
     Q.all [listMigrations(config), getCassandraClient(config)]
     .spread (migrationFiles, client) ->
       cassandraClient = client
       getSchemaVersion config, client, keyspace
       .then (schemaVersion) ->
-        migrate client, keyspace, migrationFiles, schemaVersion
+        migrate config, client, keyspace, migrationFiles, schemaVersion
       .then (version) ->
-        console.log "All migrations complete. Schema is now at version #{version}."
         code = 0
   .catch (error) ->
     console.log "Error reading configuration file: #{error}\n#{error.stack}"
