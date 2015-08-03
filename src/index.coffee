@@ -163,7 +163,9 @@ migrate = (config, client, keyspace, migrationFiles, schemaVersion) ->
   .sortBy ([file, version]) -> version
   .value()
 
-  console.log("Migrations to be applied: #{migrations} (target version is #{config.targetVersion}") if config.debug
+  versionString = if config.targetVersion == Number.MAX_VALUE then "unlimited" else config.targetVersion
+
+  console.log("Migrations to be applied: #{migrations} (target version is #{versionString})") if config.debug
 
   if _(migrations).size() > 0
     versions = _(migrations).map(([file, version]) -> version).value()
@@ -208,7 +210,7 @@ runScript = () ->
   .then (config) ->
     config.quiet = program.quiet ? config.quiet
     config.debug = program.debug ? config.debug
-    config.targetVersion = program.targetVersion
+    config.targetVersion = program.targetVersion ? Number.MAX_VALUE
     keyspace = config.cassandra.keyspace
     Q.all [listMigrations(config), getCassandraClient(config)]
     .spread (migrationFiles, client) ->

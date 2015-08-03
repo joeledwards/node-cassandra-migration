@@ -42,8 +42,11 @@ echo "}" >> $CFG_FILE
 node_modules/wait-for-cassandra/bin/wait-for-cassandra --host=$HOST --port=$PORT
 node keyspace.js
 
+# Apply migrations up to version 1
 coffee src/index.coffee -d -t 1 $CFG_FILE
-coffee src/index.coffee -d -t 2 $CFG_FILE
+
+# Apply the remaining migrations
+coffee src/index.coffee -d $CFG_FILE
 
 $DOCKER_CMD exec -it $CONTAINER_NAME cqlsh -u cassandra -p cassandra localhost
 
