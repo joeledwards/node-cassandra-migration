@@ -21,7 +21,7 @@ if [[ $PLATFORM == "Linux" ]]; then
   HOST=`${DOCKER_CMD} inspect -f '{{ .NetworkSettings.IPAddress }}' ${CONTAINER_NAME}`
   PORT=9042
 else
-  HOST="localhost"
+  HOST=`boot2docker ip`
   PORT=`${DOCKER_CMD} inspect -f '{{(index (index .NetworkSettings.Ports "9042/tcp") 0).HostPort}}' ${CONTAINER_NAME}`
 fi
 
@@ -32,8 +32,8 @@ echo "{" > $CFG_FILE
 echo "  \"migrationsDir\": \"test\"," >> $CFG_FILE
 echo "  \"cassandra\": {" >> $CFG_FILE
 echo "    \"contactPoints\": [\"${HOST}\"]," >> $CFG_FILE
-echo "    \"socketOptions\": {" >> $CFG_FILE
-echo "      \"port\": \"${PORT}\"" >> $CFG_FILE
+echo "    \"protocolOptions\": {" >> $CFG_FILE
+echo "      \"port\": ${PORT}" >> $CFG_FILE
 echo "    }," >> $CFG_FILE
 echo "    \"keyspace\": \"${KEYSPACE}\"" >> $CFG_FILE
 echo "  }" >> $CFG_FILE
