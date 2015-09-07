@@ -197,6 +197,7 @@ log = (message, error, quiet, debug) ->
 runScript = () ->
   program
     .version moduleVersion
+    .usage '[options] <config_file>'
     .option '-q, --quiet', 'Silence non-error output (default is false)'
     .option '-d, --debug', 'Increase verbosity and error detail'
     .option '-t, --target-version <version>', 'Maximum migration version to apply (default runs all migrations)'

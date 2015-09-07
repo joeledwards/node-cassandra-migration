@@ -22,7 +22,7 @@ By default the script will look for a file named migrate.json
 Run the script
 
 ```bash
-wait-for-cassandra migrate.json
+cassandra-migration migrate.json
 ```
 
 Config File
