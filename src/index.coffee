@@ -50,6 +50,7 @@ listMigrations = (config) ->
           file = "#{migrationsDir}/#{fileName}"
           [file, version]
         .filter ([file, version]) -> not isNaN(version)
+        .map ([file, version]) -> [file, parseInt(version)]
         .value()
 
         if _(migrationFiles).size() > 0
@@ -118,6 +119,7 @@ getSchemaVersion = (config, client, keyspace) ->
         d.reject new Error("Error reading version information from the version table: #{error}", error)
       else if _(results.rows).size() > 0
         version = _(results.rows)?.first()?.version ? 0
+        version = parseInt(version)
         d.resolve version
       else
         d.resolve 0
