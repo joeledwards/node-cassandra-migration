@@ -7,6 +7,20 @@ moduleVersion = require('../package.json').version
 cassandra = require 'cassandra-driver'
 durations = require 'durations'
 
+quietMode = false
+debugMode = false
+
+logError = (message, error) ->
+  errorMessage = if error? then ": #{error}" else ''
+  stack = if error? and debug then "\n#{error.stack}" else ''
+  console.error "#{message}#{errorMessage}#{stack}"
+
+logInfo = (message) ->
+  console.log message if not quietMode
+
+logDebug = (message) ->
+  console.log message if not quietMode and debugMode == true
+
 # Read the migrations configuration file
 readConfig = (configFile) ->
   Q.nfcall FS.readFile, configFile, 'utf-8'
@@ -70,42 +84,64 @@ getCassandraClient = (config) ->
       if error?
         d.reject error
       else
-        console.log "Connected to Cassandra." if config.debug
+        logDebug "Connected to Cassandra."
         d.resolve client
   catch error
     d.reject new Error("Error creating Cassandra client: #{error}", error)
   d.promise
 
-
 # Create a the schema_version table in the keyspace if it does not yet exist
 createVersionTable = (config, client, keyspace) ->
   d = Q.defer()
-  tableQuery = """SELECT columnfamily_name 
-    FROM system.schema_columnfamilies 
-    WHERE keyspace_name='#{keyspace}'"""
-  client.execute tableQuery, (error, results) ->
-    tableNames = _(results.rows).map((row) -> row.columnfamily_name).value()
+
+  versionQuery = "SELECT release_version FROM system.local"
+
+  client.execute versionQuery, (error, results) ->
+    cassandraVersion = _(results.rows).map((row) -> row.release_version).first()
+
     if error?
       d.reject error
-    else if _(tableNames).filter((tableName) -> tableName == 'schema_version').size() > 0
-      console.log "Schema_version table already exists." if config.debug
-      d.resolve client
+    if not cassandraVersion?
+      d.reject(new Error("Could not determine the version of Cassandra!"))
     else
-      console.log ""
-      createQuery = """CREATE TABLE #{keyspace}.schema_version (
-        zero INT,
-        version INT,
-        migration_timestamp TIMESTAMP, 
+      logDebug "Cassandra version: #{cassandraVersion}"
+      isVersion3 = _.startsWith cassandraVersion, "3."
 
-        PRIMARY KEY (zero, version)
-      ) WITH CLUSTERING ORDER BY (version DESC)
-      """
-      console.log "creating the schema_version table..."
-      client.execute createQuery, (error, results) ->
+      schemaKeyspace = if isVersion3 then "system_schema" else "system"
+      tablesTable = if isVersion3 then "tables" else "schema_columnfamilies"
+      tableNameColumn = if isVersion3 then "table_name" else "columnfamily_name"
+
+      logDebug "schemaKeyspace: #{schemaKeyspace}"
+      logDebug "tablesTable: #{tablesTable}"
+      logDebug "tableNameColumn: #{tableNameColumn}"
+
+      tableQuery = """SELECT #{tableNameColumn} 
+        FROM #{schemaKeyspace}.#{tablesTable} 
+        WHERE keyspace_name='#{keyspace}'"""
+
+      client.execute tableQuery, (error, results) ->
+        tableNames = _(results.rows).map((row) -> row[tableNameColumn]).value()
         if error?
-          d.reject new Error("Error creating the schema_version table: #{error}", error)
-        else
+          d.reject error
+        else if _(tableNames).filter((tableName) -> tableName == 'schema_version').size() > 0
+          logDebug "Table 'schema_version' already exists."
           d.resolve client
+        else
+          logDebug ""
+          createQuery = """CREATE TABLE #{keyspace}.schema_version (
+            zero INT,
+            version INT,
+            migration_timestamp TIMESTAMP, 
+
+            PRIMARY KEY (zero, version)
+          ) WITH CLUSTERING ORDER BY (version DESC)
+          """
+          logDebug "creating the schema_version table..."
+          client.execute createQuery, (error, results) ->
+            if error?
+              d.reject new Error("Error creating the schema_version table: #{error}", error)
+            else
+              d.resolve client
   d.promise
 
 # Fetch the schema version from the schema_version table in the keyspace
@@ -113,7 +149,7 @@ getSchemaVersion = (config, client, keyspace) ->
   createVersionTable config, client, keyspace
   .then ->
     d = Q.defer()
-    console.log "Fetching version info..." if config.debug
+    logDebug "Fetching version info..."
     client.execute "SELECT version FROM #{keyspace}.schema_version LIMIT 1", (error, results) ->
       if error?
         d.reject new Error("Error reading version information from the version table: #{error}", error)
@@ -129,7 +165,7 @@ getSchemaVersion = (config, client, keyspace) ->
 runQuery = (config, client, query, version) ->
   d = Q.defer()
   client.execute query, (error, results) ->
-    console.log "running query: #{query}" if config.debug
+    logDebug "running query: #{query}"
     if error?
       d.reject new Error("Error applying migration #{version}: #{error}", error)
     else
@@ -139,7 +175,7 @@ runQuery = (config, client, query, version) ->
 
 # Apply the first migration from the remaining, and move on to the next
 applyMigration = (config, client, keyspace, file, version) ->
-  console.log "Applying migration: #{file}"
+  logInfo "Applying migration: #{file}"
 
   queryStrings = _.trim(FS.readFileSync(file, 'utf-8')).split('---')
 
@@ -148,7 +184,7 @@ applyMigration = (config, client, keyspace, file, version) ->
     " VALUES (0, #{version}, '#{moment().toISOString()}');"
 
   queryStrings.push cql
-  console.log "Queries:", queryStrings
+  logDebug "Queries:", queryStrings
 
   queries = _(queryStrings)
   .map (cql) ->
@@ -167,12 +203,12 @@ migrate = (config, client, keyspace, migrationFiles, schemaVersion) ->
 
   versionString = if config.targetVersion == Number.MAX_VALUE then "unlimited" else config.targetVersion
 
-  console.log("Migrations to be applied: #{migrations} (target version is #{versionString})") if config.debug
+  logDebug "Migrations to be applied: #{migrations} (target version is #{versionString})"
 
   if _(migrations).size() > 0
     versions = _(migrations).map(([file, version]) -> version).value()
     versions.unshift schemaVersion
-    console.log "Migrating database #{_(versions).join(" -> ")} ..." if not config.quiet
+    logInfo "Migrating database #{_(versions).join(" -> ")} ..."
 
     migrationFunctions = _(migrations)
     .map ([file, version]) ->
@@ -186,13 +222,6 @@ migrate = (config, client, keyspace, migrationFiles, schemaVersion) ->
   else
     console.log "No new migrations. Schema version is #{schemaVersion}"
     Q(schemaVersion)
-
-
-log = (message, error, quiet, debug) ->
-  if not quiet
-    errorMessage = if error? then ": #{error}" else ''
-    stack = if error? and debug then "\n#{error.stack}" else ''
-    console.log "#{message}#{errorMessage}#{stack}"
 
 
 # Run the script
@@ -214,7 +243,11 @@ runScript = () ->
     config.quiet = program.quiet ? config.quiet
     config.debug = program.debug ? config.debug
     config.targetVersion = program.targetVersion ? Number.MAX_VALUE
+
+    quietMode = config.quiet
+    debugMode = config.debug
     keyspace = config.cassandra.keyspace
+
     Q.all [listMigrations(config), getCassandraClient(config)]
     .spread (migrationFiles, client) ->
       cassandraClient = client
@@ -224,7 +257,7 @@ runScript = () ->
       .then (version) ->
         code = 0
   .catch (error) ->
-    console.log "Error reading configuration file: #{error}\n#{error.stack}"
+    logError "Error reading configuration file", error
   .finally ->
     cassandraClient.shutdown if cassandraClient?
     process.exit code

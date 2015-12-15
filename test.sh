@@ -15,7 +15,7 @@ fi
 $DOCKER_CMD kill $CONTAINER_NAME
 $DOCKER_CMD rm $CONTAINER_NAME
 
-$DOCKER_CMD run --name=$CONTAINER_NAME -P -d cassandra:2.2
+$DOCKER_CMD run --name=$CONTAINER_NAME -P -d cassandra:3.0
 
 if [[ $PLATFORM == "Linux" ]]; then
   HOST=`${DOCKER_CMD} inspect -f '{{ .NetworkSettings.IPAddress }}' ${CONTAINER_NAME}`
