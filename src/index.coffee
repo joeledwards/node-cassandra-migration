@@ -150,17 +150,20 @@ getSchemaVersion = (config, client, keyspace) ->
   .then ->
     d = Q.defer()
     logDebug "Fetching version info..."
-    client.execute "SELECT version FROM #{keyspace}.schema_version LIMIT 1", (error, results) ->
+    versionQuery = "SELECT version FROM #{keyspace}.schema_version LIMIT 1"
+    client.execute versionQuery, (error, results) ->
       if error?
+        logError "Error reading version information from the version table", error
         d.reject new Error("Error reading version information from the version table: #{error}", error)
       else if _(results.rows).size() > 0
         version = _(results.rows)?.first()?.version ? 0
         version = parseInt(version)
+        logDebug "Current version is #{version}"
         d.resolve version
       else
+        logDebug "Current version is 0"
         d.resolve 0
     d.promise
-      
 
 runQuery = (config, client, query, version) ->
   d = Q.defer()
@@ -184,7 +187,7 @@ applyMigration = (config, client, keyspace, file, version) ->
     " VALUES (0, #{version}, '#{moment().toISOString()}');"
 
   queryStrings.push cql
-  logDebug "Queries:", queryStrings
+  #logDebug "Queries:", queryStrings
 
   queries = _(queryStrings)
   .map (cql) ->
@@ -256,6 +259,8 @@ runScript = () ->
         migrate config, client, keyspace, migrationFiles, schemaVersion
       .then (version) ->
         code = 0
+      .catch (error) ->
+        logError "Migration Error", error
   .catch (error) ->
     logError "Error reading configuration file", error
   .finally ->
