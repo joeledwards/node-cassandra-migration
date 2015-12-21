@@ -12,7 +12,7 @@ debugMode = false
 
 logError = (message, error) ->
   errorMessage = if error? then ": #{error}" else ''
-  stack = if error? and debug then "\n#{error.stack}" else ''
+  stack = if error? and debugMode then "\n#{error.stack}" else ''
   console.error "#{message}#{errorMessage}#{stack}"
 
 logInfo = (message) ->
