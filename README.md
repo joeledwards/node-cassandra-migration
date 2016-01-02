@@ -51,9 +51,15 @@ Example config:
     "socketOptions": {
       "connectTimeout": 15000
     }
+  },
+  "auth": {
+    "username": "foo",
+    "password": "bar"
   }
 }
 ```
+
+The `auth` section of the config is optional.
 
 
 Migration Files

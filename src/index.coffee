@@ -251,6 +251,12 @@ runScript = () ->
     debugMode = config.debug
     keyspace = config.cassandra.keyspace
 
+    if config.auth?
+      logDebug "Connecting with simple user authentication."
+      config.cassandra.authProvider = new cassandra.auth.PlainTextAuthProvider(config.auth.username, config.auth.password)
+    else
+      logDebug "Connecting without authentication."
+
     Q.all [listMigrations(config), getCassandraClient(config)]
     .spread (migrationFiles, client) ->
       cassandraClient = client

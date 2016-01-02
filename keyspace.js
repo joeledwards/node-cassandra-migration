@@ -20,7 +20,7 @@ client.connect(function (error) {
     deferred.resolve(1);
   } else {
     var query = "CREATE KEYSPACE IF NOT EXISTS " + keyspace +
-      " WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':1}";
+      " WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':2}";
 
     client.execute(query, function (error, results) {
       client.shutdown();
