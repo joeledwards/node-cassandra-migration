@@ -234,6 +234,7 @@ runScript = () ->
     .usage '[options] <config_file>'
     .option '-q, --quiet', 'Silence non-error output (default is false)'
     .option '-d, --debug', 'Increase verbosity and error detail'
+    .option '-k, --keyspace <keyspace>', 'Cassandra keyspace used for migration and schema_version table'
     .option '-t, --target-version <version>', 'Maximum migration version to apply (default runs all migrations)'
     .parse(process.argv)
 
@@ -245,6 +246,7 @@ runScript = () ->
   .then (config) ->
     config.quiet = program.quiet ? config.quiet
     config.debug = program.debug ? config.debug
+    config.cassandra.keyspace = program.keyspace ? config.cassandra.keyspace
     config.targetVersion = program.targetVersion ? Number.MAX_VALUE
 
     quietMode = config.quiet
