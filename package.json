@@ -26,15 +26,15 @@
   "dependencies": {
     "cassandra-driver": "^3.0",
     "commander": "^2.9",
-    "durations": "^1",
-    "lodash": "^3.10",
+    "durations": "^2.2.0",
+    "lodash": "^4.13.1",
     "moment": "^2.10",
     "q": "^1.4"
   },
   "devDependencies": {
     "coffee-script": "^1.10",
     "mocha": "^2.3",
-    "wait-for-cassandra": "^3.0"
+    "wait-for-cassandra": "^2.1.0"
   },
   "scripts": {
     "build": "cake build",
