@@ -1,6 +1,7 @@
 _ = require 'lodash'
 Q = require 'q'
 FS = require 'fs'
+path = require 'path'
 moment = require 'moment'
 program = require 'commander'
 moduleVersion = require('../package.json').version
@@ -23,22 +24,13 @@ logDebug = (message) ->
 
 # Read the migrations configuration file
 readConfig = (configFile) ->
-  Q.nfcall FS.readFile, configFile, 'utf-8'
-  .then (rawConfig) ->
-    d = Q.defer()
-    try
-      config = JSON.parse rawConfig
-      d.resolve config
-    catch error
-      d.reject error
-    d.promise
-  .then (config) ->
-    d = Q.defer()
-    if config.cassandra?
-      d.resolve config
-    else
-      d.reject new Error("Cassandra configuration not supplied.")
-    d.promise
+  config = require path.join(process.cwd(), configFile)
+  d = Q.defer()
+  if config.cassandra?
+    d.resolve config
+  else
+    d.reject new Error("Cassandra configuration not supplied.")
+  d.promise
 
 
 # List out all of the migration files in the migrations directory
@@ -50,18 +42,18 @@ listMigrations = (config) ->
   else if not FS.existsSync migrationsDir
     d.reject new Error("Migrations directory does not exist.")
   else
-    FS.readdir migrationsDir, (error, files) ->
+    FS.readdir path.join(process.cwd(), migrationsDir), (error, files) ->
       if error?
         d.reject new Error("Error listing migrations directory contents: #{error}", error)
       else
         migrationFiles = _(files)
         .filter (fileName) -> _.endsWith(fileName.toLowerCase(), '.cql')
         .filter (fileName) ->
-          filePath = "#{migrationsDir}/#{fileName}"
+          filePath = path.join(process.cwd(), migrationsDir, fileName)
           FS.statSync(filePath).isFile()
         .map (fileName) ->
           version = fileName.split('__')[0]
-          file = "#{migrationsDir}/#{fileName}"
+          file = path.join(process.cwd(), migrationsDir, fileName)
           [file, version]
         .filter ([file, version]) -> not isNaN(version)
         .map ([file, version]) -> [file, parseInt(version)]
@@ -115,8 +107,8 @@ createVersionTable = (config, client, keyspace) ->
       logDebug "tablesTable: #{tablesTable}"
       logDebug "tableNameColumn: #{tableNameColumn}"
 
-      tableQuery = """SELECT #{tableNameColumn} 
-        FROM #{schemaKeyspace}.#{tablesTable} 
+      tableQuery = """SELECT #{tableNameColumn}
+        FROM #{schemaKeyspace}.#{tablesTable}
         WHERE keyspace_name='#{keyspace}'"""
 
       client.execute tableQuery, (error, results) ->
@@ -131,7 +123,7 @@ createVersionTable = (config, client, keyspace) ->
           createQuery = """CREATE TABLE #{keyspace}.schema_version (
             zero INT,
             version INT,
-            migration_timestamp TIMESTAMP, 
+            migration_timestamp TIMESTAMP,
 
             PRIMARY KEY (zero, version)
           ) WITH CLUSTERING ORDER BY (version DESC)
@@ -174,7 +166,7 @@ runQuery = (config, client, query, version) ->
     else
       d.resolve version
   d.promise
-    
+
 
 # Apply the first migration from the remaining, and move on to the next
 applyMigration = (config, client, keyspace, file, version) ->
@@ -283,4 +275,3 @@ module.exports =
 # If run directly
 if require.main == module
   runScript()
-

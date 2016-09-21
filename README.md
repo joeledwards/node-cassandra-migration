@@ -25,6 +25,8 @@ Run the script
 cassandra-migration migrate.json
 ```
 
+You can also use a .js file with classic `module.exports = {}`
+
 Config File
 ===========
 
@@ -61,11 +63,34 @@ Example config:
 
 The `auth` section of the config is optional.
 
+JS config file example:
+
+```js
+module.exports = {
+  migrationsDir: 'cassandra/schema/migrations',
+  quiet: false,
+  cassandra: {
+    contactPoints: [ 'cass0', 'cass1' ],
+    keyspace: 'data',
+    protocolOptions: {
+      port: 9042
+    },
+    socketOptions: {
+      connectTimeout: 15000
+    }
+  },
+  auth: {
+    username: 'foo',
+    password: 'bar'
+  }
+}
+```
+
 
 Migration Files
 ===============
 
-The migration files should all be reside at the root level of the directory 
+The migration files should all be reside at the root level of the directory
 specified by `migrationDir` in the config file. Each configuration file should
 follow the format `<VERSION>__<TITLE>.cql`
 
@@ -91,4 +116,3 @@ Building
 ============
 
 cake build
-
