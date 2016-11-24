@@ -23,22 +23,25 @@ logDebug = (message) ->
 
 # Read the migrations configuration file
 readConfig = (configFile) ->
-  Q.nfcall FS.readFile, configFile, 'utf-8'
-  .then (rawConfig) ->
-    d = Q.defer()
-    try
-      config = JSON.parse rawConfig
-      d.resolve config
-    catch error
-      d.reject error
-    d.promise
-  .then (config) ->
-    d = Q.defer()
+  # get the process path
+  configPath = process.cwd()
+
+  d = Q.defer()
+  
+  try
+    config = require "#{configPath}/#{configFile}"
+
+    console.log "Configuration loaded successfully."
+
     if config.cassandra?
       d.resolve config
     else
       d.reject new Error("Cassandra configuration not supplied.")
-    d.promise
+
+  catch error
+    d.reject error
+  
+  d.promise
 
 
 # List out all of the migration files in the migrations directory
@@ -279,7 +282,7 @@ runScript = () ->
     .option '-t, --target-version <version>', 'Maximum migration version to apply (default runs all migrations)'
     .parse(process.argv)
 
-  configFile = _(program.args).last() || 'config.json'
+  configFile = _(program.args).last() || "config"
   code = 1
   cassandraClient = undefined
 
