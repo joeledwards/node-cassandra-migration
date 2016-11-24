@@ -250,6 +250,7 @@ generateMigration = (config, migrationName) ->
       if error?
         d.reject new Error("Error creating the migration: #{error}", error)
       else
+        console.log "Migrations file #{pathToWrite} generated successfully."
         d.resolve true
   d.promise.then (success) ->
     success
