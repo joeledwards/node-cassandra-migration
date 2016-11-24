@@ -226,24 +226,67 @@ migrate = (config, client, keyspace, migrationFiles, schemaVersion) ->
     console.log "No new migrations. Schema version is #{schemaVersion}"
     Q(schemaVersion)
 
+generateMigration = (config, migrationName) ->
+  migrationsDir = config.migrationsDir
+  migrationName = migrationName.replace(/[^\w\s]/gi, '-')
+  migrationName = migrationName.toLowerCase()
+
+  if not migrationName
+    logDebug "Give a better migration name."
+    return
+
+  timestamp = Math.floor Date.now() / 1000
+
+  finalMigrationName = "#{timestamp}__#{migrationName}.cql"
+  pathToWrite = "#{migrationsDir}/#{finalMigrationName}"
+  console.log('finalMigrationName', finalMigrationName);
+  console.log('pathToWrite', pathToWrite);
+
+  d = Q.defer()
+  if not migrationsDir?
+    d.reject new Error("The config did not contain a migrationsDir property.")
+  else if not FS.existsSync migrationsDir
+    d.reject new Error("Migrations directory does not exist.")
+  else
+    FS.write finalMigrationName, (error, files) ->
+      if error?
+        d.reject new Error("Error creating the migration: #{error}", error)
+      else
+        d.resolve true
+  d.promise.then (success) ->
+    success
+
+runMigrations = (config, keyspace) ->
+  Q.all [listMigrations(config), getCassandraClient(config)]
+  .spread (migrationFiles, client) ->
+    cassandraClient = client
+    getSchemaVersion config, client, keyspace
+    .then (schemaVersion) ->
+      migrate config, client, keyspace, migrationFiles, schemaVersion
+    .then (version) ->
+      code = 0
+    .catch (error) ->
+      logError "Migration Error", error
 
 # Run the script
 runScript = () ->
   program
     .version moduleVersion
     .usage '[options] <config_file>'
+    .option '-g, --generate <migration_name>', 'Generate a new migration'
     .option '-q, --quiet', 'Silence non-error output (default is false)'
     .option '-d, --debug', 'Increase verbosity and error detail'
     .option '-k, --keyspace <keyspace>', 'Cassandra keyspace used for migration and schema_version table'
     .option '-t, --target-version <version>', 'Maximum migration version to apply (default runs all migrations)'
     .parse(process.argv)
 
-  configFile = _(program.args).last()
+  configFile = _(program.args).last() || 'config.json'
   code = 1
   cassandraClient = undefined
 
   readConfig configFile
   .then (config) ->
+    config.generate = program.generate ? false
     config.quiet = program.quiet ? config.quiet
     config.debug = program.debug ? config.debug
     config.cassandra.keyspace = program.keyspace ? config.cassandra.keyspace
@@ -259,16 +302,12 @@ runScript = () ->
     else
       logDebug "Connecting without authentication."
 
-    Q.all [listMigrations(config), getCassandraClient(config)]
-    .spread (migrationFiles, client) ->
-      cassandraClient = client
-      getSchemaVersion config, client, keyspace
-      .then (schemaVersion) ->
-        migrate config, client, keyspace, migrationFiles, schemaVersion
-      .then (version) ->
-        code = 0
-      .catch (error) ->
-        logError "Migration Error", error
+    if program.generate
+      generateMigration config, program.generate
+    else
+      runMigrations config, keyspace
+
+
   .catch (error) ->
     logError "Error reading configuration file", error
   .finally ->
