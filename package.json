@@ -26,6 +26,7 @@
   "dependencies": {
     "cassandra-driver": "^3.0",
     "commander": "^2.9",
+    "dotenv": "^2.0.0",
     "durations": "^2.2.0",
     "lodash": "^4.13.1",
     "moment": "^2.10",
