@@ -232,7 +232,7 @@ generateMigration = (config, migrationName) ->
   migrationName = migrationName.toLowerCase()
 
   if not migrationName
-    logDebug "Give a better migration name."
+    console.log "Give a better migration name."
     return
 
   timestamp = Math.floor Date.now() / 1000
