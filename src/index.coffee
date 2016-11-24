@@ -239,8 +239,6 @@ generateMigration = (config, migrationName) ->
 
   finalMigrationName = "#{timestamp}__#{migrationName}.cql"
   pathToWrite = "#{migrationsDir}/#{finalMigrationName}"
-  console.log('finalMigrationName', finalMigrationName);
-  console.log('pathToWrite', pathToWrite);
 
   d = Q.defer()
   if not migrationsDir?
@@ -248,7 +246,7 @@ generateMigration = (config, migrationName) ->
   else if not FS.existsSync migrationsDir
     d.reject new Error("Migrations directory does not exist.")
   else
-    FS.write finalMigrationName, (error, files) ->
+    FS.writeFile pathToWrite, "", (error, files) ->
       if error?
         d.reject new Error("Error creating the migration: #{error}", error)
       else
