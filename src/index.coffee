@@ -227,7 +227,7 @@ migrate = (config, client, keyspace, migrationFiles, schemaVersion) ->
     Q(schemaVersion)
 
 
-cassandrahosts = (val) ->
+parseCassandraHosts = (val) ->
   val.split(',')
 
 # Run the script
@@ -239,7 +239,7 @@ runScript = () ->
     .option '-d, --debug', 'Increase verbosity and error detail'
     .option '-k, --keyspace <keyspace>', 'Cassandra keyspace used for migration and schema_version table'
     .option '-t, --target-version <version>', 'Maximum migration version to apply (default runs all migrations)'
-    .option '-h, --hosts <hosts>', 'A comma separated list of cassandra hosts'
+    .option '-h, --hosts <hosts>', 'A comma separated list of cassandra hosts', parseCassandrahosts
     .parse(process.argv)
 
   configFile = _(program.args).last()
