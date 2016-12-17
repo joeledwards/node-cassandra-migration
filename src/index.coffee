@@ -227,6 +227,9 @@ migrate = (config, client, keyspace, migrationFiles, schemaVersion) ->
     Q(schemaVersion)
 
 
+parseCassandraHosts = (val) ->
+  val.split(',')
+
 # Run the script
 runScript = () ->
   program
@@ -236,6 +239,7 @@ runScript = () ->
     .option '-d, --debug', 'Increase verbosity and error detail'
     .option '-k, --keyspace <keyspace>', 'Cassandra keyspace used for migration and schema_version table'
     .option '-t, --target-version <version>', 'Maximum migration version to apply (default runs all migrations)'
+    .option '-h, --hosts <hosts>', 'A comma separated list of cassandra hosts', parseCassandraHosts
     .parse(process.argv)
 
   configFile = _(program.args).last()
@@ -248,6 +252,7 @@ runScript = () ->
     config.debug = program.debug ? config.debug
     config.cassandra.keyspace = program.keyspace ? config.cassandra.keyspace
     config.targetVersion = program.targetVersion ? Number.MAX_VALUE
+    config.cassandra.contactPoints = program.hosts ? config.cassandra.contactPoints
 
     quietMode = config.quiet
     debugMode = config.debug
