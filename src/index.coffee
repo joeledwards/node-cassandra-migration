@@ -184,7 +184,7 @@ applyMigration = (config, client, keyspace, file, version) ->
 
   cql = "INSERT INTO #{keyspace}.schema_version" +
     " (zero, version, migration_timestamp)" +
-    " VALUES (0, #{version}, '#{moment().toISOString()}');"
+    " VALUES (0, #{version}, '#{moment().unix()*1000}');"
 
   queryStrings.push cql
   #logDebug "Queries:", queryStrings
