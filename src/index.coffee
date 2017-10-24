@@ -1,7 +1,6 @@
 _ = require 'lodash'
 Q = require 'q'
 FS = require 'fs'
-moment = require 'moment'
 program = require 'commander'
 moduleVersion = require('../package.json').version
 cassandra = require 'cassandra-driver'
@@ -184,7 +183,7 @@ applyMigration = (config, client, keyspace, file, version) ->
 
   cql = "INSERT INTO #{keyspace}.schema_version" +
     " (zero, version, migration_timestamp)" +
-    " VALUES (0, #{version}, '#{moment().unix()*1000}');"
+    " VALUES (0, #{version}, '#{new Date().getTime()}');"
 
   queryStrings.push cql
   #logDebug "Queries:", queryStrings
