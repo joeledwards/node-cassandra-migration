@@ -30,7 +30,7 @@ echo "Waiting for node 1 to come online..."
 node_modules/wait-for-cassandra/bin/wait-for-cassandra --host=$CASS1_IP --port=$PORT
 
 echo "Waiting for node 2 to come online..."
-node_modules/wait-for-cassandra/bin/wait-for-cassandra --host=$CASS1_IP --port=$PORT
+node_modules/wait-for-cassandra/bin/wait-for-cassandra --host=$CASS2_IP --port=$PORT
 
 echo "{" > $CFG_FILE
 echo "  \"migrationsDir\": \"test\"," >> $CFG_FILE
@@ -56,10 +56,10 @@ echo "Cluster status from node 2:"
 $DOCKER_CMD exec $CASS2 nodetool status $KEYSPACE
 
 # Apply migrations up to version 1
-coffee src/index.coffee -d -t 1 $CFG_FILE
+./node_modules/.bin/coffee src/index.coffee -d -t 1 $CFG_FILE
 
 # Apply the remaining migrations
-coffee src/index.coffee -d $CFG_FILE
+./node_modules/.bin/coffee src/index.coffee -d $CFG_FILE
 
 echo "Version table from node 1:"
 $DOCKER_CMD exec $CASS1 cqlsh --execute "SELECT * FROM versioning.schema_version"
