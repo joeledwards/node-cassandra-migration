@@ -1,2 +1,8 @@
 /src
 /test
+test.sh
+sandbox.coffee
+package-lock.json
+migrations.json
+Cakefile
+
