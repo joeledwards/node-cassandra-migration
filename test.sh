@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PLATFORM=`uname`
-CASSANDRA_VERSION=3.0
+CASSANDRA_VERSION=3.3
 CASS1="cassandra-migration-test-container-1"
 CASS2="cassandra-migration-test-container-2"
 PORT=9042

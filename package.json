@@ -24,7 +24,7 @@
     "cassandra-migration": "./bin/cassandra-migration"
   },
   "dependencies": {
-    "cassandra-driver": "^3.0",
+    "cassandra-driver": "^3.3.0",
     "commander": "^2.9",
     "durations": "^2.2.0",
     "lodash": "^4.13.1",
