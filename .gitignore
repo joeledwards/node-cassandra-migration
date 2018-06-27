@@ -1,6 +1,6 @@
 node_modules
 npm-debug.log
 /migrations.json
-#/lib
+/lib
 package-lock.json
 *.swp

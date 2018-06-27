@@ -26,13 +26,13 @@
   "dependencies": {
     "cassandra-driver": "^3.3.0",
     "commander": "^2.9",
-    "durations": "^2.2.0",
+    "durations": "^3.4.1",
     "lodash": "^4.13.1",
     "q": "^1.4"
   },
   "devDependencies": {
     "coffee-script": "^1.10",
-    "mocha": "^2.3",
+    "mocha": "^5.2.0",
     "wait-for-cassandra": "^2.1.0"
   },
   "scripts": {
