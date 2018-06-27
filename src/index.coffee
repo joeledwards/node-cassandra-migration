@@ -9,6 +9,12 @@ durations = require 'durations'
 quietMode = false
 debugMode = false
 
+sleep = (ms) ->
+  new Promise((resolve) ->
+    setTimeout resolve, ms
+    return
+  )
+
 logError = (message, error) ->
   errorMessage = if error? then ": #{error}" else ''
   stack = if error? and debugMode then "\n#{error.stack}" else ''
@@ -176,7 +182,7 @@ runQuery = (config, client, query, version) ->
     
 
 # Apply the first migration from the remaining, and move on to the next
-applyMigration = (config, client, keyspace, file, version) ->
+applyMigration = (config, client, keyspace, file, version, interval) ->
   logInfo "Applying migration: #{file}"
 
   queryStrings = _.trim(FS.readFileSync(file, 'utf-8')).split('---')
@@ -188,16 +194,16 @@ applyMigration = (config, client, keyspace, file, version) ->
   queryStrings.push cql
   #logDebug "Queries:", queryStrings
 
-  queries = _(queryStrings)
-  .map (cql) ->
-    -> runQuery config, client, cql, version
-  .value()
-
-  queries.reduce(Q.when, Q(version))
+  queryStrings.reduce ((promiseChain, queryString) ->
+    promiseChain.then ->
+      runQuery(config, client, queryString, version).then ->
+        sleep(interval).then ->
+          version
+  ), Promise.resolve()
 
 
 # Run all of the migrations
-migrate = (config, client, keyspace, migrationFiles, schemaVersion) ->
+migrate = (config, client, keyspace, migrationFiles, schemaVersion, interval) ->
   migrations = _(migrationFiles)
   .filter ([file, version]) -> version > schemaVersion and version <= config.targetVersion
   .sortBy ([file, version]) -> version
@@ -214,7 +220,7 @@ migrate = (config, client, keyspace, migrationFiles, schemaVersion) ->
 
     migrationFunctions = _(migrations)
     .map ([file, version]) ->
-      -> applyMigration config, client, keyspace, file, version
+      -> applyMigration config, client, keyspace, file, version, interval
     .value()
 
     migrationFunctions.reduce(Q.when, Q(schemaVersion))
@@ -238,6 +244,7 @@ runScript = () ->
     .option '-h, --hosts <hosts>', 'A comma separated list of cassandra hosts', parseCassandraHosts
     .option '-k, --keyspace <keyspace>', 'Cassandra keyspace used for migration and schema_version table'
     .option '-q, --quiet', 'Silence non-error output (default is false)'
+    .option '-i, --interval <interval>', 'Milliseconds to wait between migration queries are executed'
     .option '-t, --target-version <version>', 'Maximum migration version to apply (default runs all migrations)'
     .parse(process.argv)
 
@@ -256,6 +263,7 @@ runScript = () ->
     quietMode = config.quiet
     debugMode = config.debug
     keyspace = config.cassandra.keyspace
+    interval = program.interval ? 0
 
     if config.auth?
       logDebug "Connecting with simple user authentication."
@@ -268,7 +276,7 @@ runScript = () ->
       cassandraClient = client
       getSchemaVersion config, client, keyspace
       .then (schemaVersion) ->
-        migrate config, client, keyspace, migrationFiles, schemaVersion
+        migrate config, client, keyspace, migrationFiles, schemaVersion, interval
       .then (version) ->
         code = 0
       .catch (error) ->
