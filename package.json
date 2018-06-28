@@ -9,7 +9,8 @@
   "version": "2.5.0",
   "author": "Joel Edwards (https://github.com/joeledwards)",
   "contributors": [
-    "Joel Edwards <joeledwards@gmail.com> (https://github.com/joeledwards)"
+    "Joel Edwards <joeledwards@gmail.com> (https://github.com/joeledwards)",
+    "Jonas Verhoelen <jverhoelen@gmail.com> (https://github.com/jverhoelen)"
   ],
   "repository": {
     "type": "git",
