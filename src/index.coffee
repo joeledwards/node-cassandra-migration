@@ -84,7 +84,16 @@ listMigrations = (config) ->
 getCassandraClient = (config) ->
   d = Q.defer()
   try
-    client = new cassandra.Client(config.cassandra)
+    cassandraConfig = config.cassandra
+    if cassandraConfig.datacenterName?
+      defaultPolicy = new cassandra.policies.loadBalancing.DCAwareRoundRobinPolicy(cassandraConfig.datacenterName)
+      nodeWhiteList = [ cassandraConfig.contactPoints[0] ]
+      whiteListPolicy = new cassandra.policies.loadBalancing.WhiteListPolicy(defaultPolicy, nodeWhiteList)
+      cassandraConfig.policies = {
+        loadBalancing : whiteListPolicy
+      }
+
+    client = new cassandra.Client(cassandraConfig)
     client.connect (error) ->
       if error?
         d.reject error
