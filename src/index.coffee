@@ -87,7 +87,7 @@ getCassandraClient = (config) ->
     cassandraConfig = config.cassandra
     if cassandraConfig.datacenterName?
       defaultPolicy = new cassandra.policies.loadBalancing.DCAwareRoundRobinPolicy(cassandraConfig.datacenterName)
-      nodeWhiteList = [ cassandraConfig.contactPoints[0] ]
+      nodeWhiteList = [ firstNodeWithPort(cassandraConfig) ]
       whiteListPolicy = new cassandra.policies.loadBalancing.WhiteListPolicy(defaultPolicy, nodeWhiteList)
       cassandraConfig.policies = {
         loadBalancing : whiteListPolicy
@@ -103,6 +103,13 @@ getCassandraClient = (config) ->
   catch error
     d.reject new Error("Error creating Cassandra client: #{error}", error)
   d.promise
+
+firstNodeWithPort = (cassandraConfig) ->
+  firstNode = cassandraConfig.contactPoints[0]
+  if firstNode.match(/[^\:]+:[0-9]+/)
+    firstNode
+  else
+    "#{firstNode}:#{cassandraConfig.protocolOptions.port}"
 
 # Create a the schema_version table in the keyspace if it does not yet exist
 createVersionTable = (config, client, keyspace) ->
