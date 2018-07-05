@@ -44,6 +44,8 @@ Example config:
   "quiet": false,
   "cassandra": {
     "contactPoints": [ "cass0", "cass1" ],
+    "datacenterName": "datacenter1",
+    "useSingleNode": false,
     "keyspace": "data",
     "protocolOptions": {
       "port": 9042
@@ -59,7 +61,8 @@ Example config:
 }
 ```
 
-The `auth` section of the config is optional.
+* The `auth` section of the config is optional.
+* Also the `datacenterName` is optional but needed when `useSingleNode` is set to true. If it is configured, the Cassandra client will use [WhiteListPolicy](https://docs.datastax.com/en/developer/nodejs-driver/3.3/api/module.policies/module.loadBalancing/class.WhiteListPolicy/) and tries to connect only via the first node of `contactPoints` that you configured. This follows the recommendations of DataStax to only migrate one node at a time and let the cluster replicate the schema updates itself. Otherwise, there is a chance that the cluster breaks.
 
 
 Migration Files

@@ -6,3 +6,5 @@ package-lock.json
 migrations.json
 Cakefile
 .nvmrc
+.idea/
+*.iml
