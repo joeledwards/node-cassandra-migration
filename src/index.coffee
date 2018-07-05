@@ -84,7 +84,17 @@ listMigrations = (config) ->
 getCassandraClient = (config) ->
   d = Q.defer()
   try
-    client = new cassandra.Client(config.cassandra)
+    cassandraConfig = config.cassandra
+    if cassandraConfig.datacenterName? && cassandraConfig.useSingleNode
+      dcAwareRoundRobinPolicy = new cassandra.policies.loadBalancing.DCAwareRoundRobinPolicy(cassandraConfig.datacenterName)
+      tokenAwarePolicy = new cassandra.policies.loadBalancing.TokenAwarePolicy(dcAwareRoundRobinPolicy)
+      nodeWhiteList = [ firstNodeWithPort(cassandraConfig) ]
+      whiteListPolicy = new cassandra.policies.loadBalancing.WhiteListPolicy(tokenAwarePolicy, nodeWhiteList)
+      cassandraConfig.policies = {
+        loadBalancing : whiteListPolicy
+      }
+
+    client = new cassandra.Client(cassandraConfig)
     client.connect (error) ->
       if error?
         d.reject error
@@ -94,6 +104,13 @@ getCassandraClient = (config) ->
   catch error
     d.reject new Error("Error creating Cassandra client: #{error}", error)
   d.promise
+
+firstNodeWithPort = (cassandraConfig) ->
+  firstNode = cassandraConfig.contactPoints[0]
+  if firstNode.match(/[^\:]+:[0-9]+/)
+    firstNode
+  else
+    "#{firstNode}:#{cassandraConfig.protocolOptions.port}"
 
 # Create a the schema_version table in the keyspace if it does not yet exist
 createVersionTable = (config, client, keyspace) ->

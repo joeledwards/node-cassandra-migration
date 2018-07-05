@@ -5,4 +5,4 @@ sandbox.coffee
 package-lock.json
 migrations.json
 Cakefile
-
+*.iml
