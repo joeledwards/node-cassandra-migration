@@ -85,10 +85,11 @@ getCassandraClient = (config) ->
   d = Q.defer()
   try
     cassandraConfig = config.cassandra
-    if cassandraConfig.datacenterName?
-      defaultPolicy = new cassandra.policies.loadBalancing.DCAwareRoundRobinPolicy(cassandraConfig.datacenterName)
+    if cassandraConfig.datacenterName? && cassandraConfig.useSingleNode?
+      dcAwareRoundRobinPolicy = new cassandra.policies.loadBalancing.DCAwareRoundRobinPolicy(cassandraConfig.datacenterName)
+      tokenAwarePolicy = new cassandra.policies.loadBalancing.TokenAwarePolicy(dcAwareRoundRobinPolicy)
       nodeWhiteList = [ firstNodeWithPort(cassandraConfig) ]
-      whiteListPolicy = new cassandra.policies.loadBalancing.WhiteListPolicy(defaultPolicy, nodeWhiteList)
+      whiteListPolicy = new cassandra.policies.loadBalancing.WhiteListPolicy(tokenAwarePolicy, nodeWhiteList)
       cassandraConfig.policies = {
         loadBalancing : whiteListPolicy
       }
