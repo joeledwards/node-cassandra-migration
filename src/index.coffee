@@ -127,11 +127,11 @@ createVersionTable = (config, client, keyspace) ->
       d.reject(new Error("Could not determine the version of Cassandra!"))
     else
       logDebug "Cassandra version: #{cassandraVersion}"
-      isVersion3 = _.startsWith cassandraVersion, "3."
+      isVersion3orAbove = _.startsWith(cassandraVersion, "3.") || _.startsWith(cassandraVersion, "4.")
 
-      schemaKeyspace = if isVersion3 then "system_schema" else "system"
-      tablesTable = if isVersion3 then "tables" else "schema_columnfamilies"
-      tableNameColumn = if isVersion3 then "table_name" else "columnfamily_name"
+      schemaKeyspace = if isVersion3orAbove then "system_schema" else "system"
+      tablesTable = if isVersion3orAbove then "tables" else "schema_columnfamilies"
+      tableNameColumn = if isVersion3orAbove then "table_name" else "columnfamily_name"
 
       logDebug "schemaKeyspace: #{schemaKeyspace}"
       logDebug "tablesTable: #{tablesTable}"
