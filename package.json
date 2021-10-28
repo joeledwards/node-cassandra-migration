@@ -6,7 +6,7 @@
     "Migration",
     "Schema"
   ],
-  "version": "2.6.0",
+  "version": "2.6.1",
   "author": "Joel Edwards (https://github.com/joeledwards)",
   "contributors": [
     "Joel Edwards <joeledwards@gmail.com> (https://github.com/joeledwards)",
@@ -22,7 +22,7 @@
     "lib": "./lib"
   },
   "bin": {
-    "cassandra-migration": "./bin/cassandra-migration"
+    "cassandra-migration": "bin/cassandra-migration"
   },
   "dependencies": {
     "cassandra-driver": "^3.3.0",
