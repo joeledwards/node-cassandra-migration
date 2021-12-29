@@ -25,11 +25,11 @@
     "cassandra-migration": "bin/cassandra-migration"
   },
   "dependencies": {
-    "cassandra-driver": "^3.3.0",
-    "commander": "^2.9",
-    "durations": "^3.4.1",
-    "lodash": "^4.13.1",
-    "q": "^1.4"
+    "cassandra-driver": "^4.6.3",
+    "commander": "^8.3.0",
+    "durations": "^3.4.2",
+    "lodash": "^4.17.21",
+    "q": "^1.5.1"
   },
   "devDependencies": {
     "coffee-script": "^1.10",
