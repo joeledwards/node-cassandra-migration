@@ -33,14 +33,13 @@
   },
   "devDependencies": {
     "coffee-script": "^1.10",
-    "mocha": "^5.2.0",
     "wait-for-cassandra": "^2.1.0"
   },
   "scripts": {
     "build": "cake build",
     "prepublish": "cake build",
     "start": "coffee src/index.coffee",
-    "test": "cake test"
+    "test": "echo 'Please install docker and execute the `test.sh` script.'"
   },
   "engines": {
     "node": ">=0.10"
