@@ -30,7 +30,7 @@ Config File
 ===========
 
 The configuration file contains general options at the top level and the cassandra connection configuration.
-The `cassandra` section should comply with the the configuration supported by the cassandra-driver module.
+The `cassandra` section should comply with the configuration supported by the cassandra-driver module.
 All other sections provide directives to the tool itself.
 
 The keyspace is required, and must be created outside of the migrations.
@@ -46,6 +46,7 @@ Example config:
   "cassandra": {
     "contactPoints": [ "cass0", "cass1" ],
     "datacenterName": "datacenter1",
+    "localDataCenter": "datacenter1",
     "useSingleNode": false,
     "keyspace": "data",
     "protocolOptions": {

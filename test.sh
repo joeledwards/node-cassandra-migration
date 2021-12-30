@@ -36,6 +36,7 @@ echo "{" > $CFG_FILE
 echo "  \"migrationsDir\": \"test\"," >> $CFG_FILE
 echo "  \"cassandra\": {" >> $CFG_FILE
 echo "    \"contactPoints\": [\"${CASS1_IP}\", \"${CASS2_IP}\"]," >> $CFG_FILE
+echo "    \"localDataCenter\": \"datacenter1\"," >> $CFG_FILE
 echo "    \"protocolOptions\": {" >> $CFG_FILE
 echo "      \"port\": ${PORT}" >> $CFG_FILE
 echo "    }," >> $CFG_FILE
