@@ -92,8 +92,19 @@ CREATE TABLE my_keyspace.my_second_table (
 ```
 
 
-Building
-============
+Development
+===========
 
-cake build
+## Build a release
+npm run build
 
+## How to release a new version
+1. commit all your changes
+2. execute `npm run release`. The command will automatically do a version bump.
+```
+npm run release
+
+Versioning package...
+Pushing new release tag to GitHub...
+Creating a new GitHub release...
+```

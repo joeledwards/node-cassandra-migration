@@ -34,11 +34,12 @@
   },
   "devDependencies": {
     "coffee-script": "^1.10",
+    "npm-github-release": "^0.13.0",
     "wait-for-cassandra": "^2.1.0"
   },
   "scripts": {
     "build": "cake build",
-    "prepublish": "cake build",
+    "release": "cake build && npm-github-release",
     "start": "coffee src/index.coffee",
     "test": "echo 'Please install docker and execute the `test.sh` script.'"
   },
