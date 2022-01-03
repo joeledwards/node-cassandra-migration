@@ -15,7 +15,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/joeledwards/node-cassandra-migration.git"
+    "url": "https://github.com/ruettenm/node-cassandra-migration.git"
   },
   "license": "MIT",
   "main": "./lib/index",
