@@ -1,5 +1,3 @@
-> :warning: **Looking for a new maintainer**: Let me know if you are prior contributor or maintainer who is interested in taking over.
-
 Cassandra Migration
 ===========
 
